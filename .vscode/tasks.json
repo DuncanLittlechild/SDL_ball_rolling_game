@@ -1,0 +1,31 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Linux Debug Unity Build",
+            "type": "shell",
+            "command": "g++",
+            "args": [
+                "-g",
+                "-std=c++23",
+                "-Wall",
+                "-Wextra",
+                "-fstack-protector-strong",
+                "-fsanitize=address,undefined",
+                "-I${workspaceFolder}/include",
+                "-L${workspaceFolder}/lib/*.cpp",
+                "main.cpp",
+                "-o",
+                "${workspaceFolder}/bin/db_main",
+                "-lSDL3",
+                "-lSDL3_image"
+                    // Put further linker flags here
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": ["$gcc"]
+        }
+    ]
+}
