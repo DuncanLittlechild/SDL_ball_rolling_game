@@ -1,4 +1,5 @@
 #include <SDL3/SDL_events.h>
+#include <SDL3/SDL_pixels.h>
 #include <SDL3/SDL_rect.h>
 #include <SDL3/SDL_render.h>
 #include <SDL3/SDL_scancode.h>
@@ -65,13 +66,14 @@ struct ExternalInput {
 };
 
 struct GameState {
-    GameSettings  settings {};
-    SDL_Window*   window   {nullptr};
-    SDL_Renderer* renderer {nullptr};
-    Player        player   {};
-    Camera        camera   {};
-    GameMap       map      {};
-    ExternalInput input    {};
+    GameSettings              settings {};
+    SDL_Window*               window   {nullptr};
+    SDL_Renderer*             renderer {nullptr};
+    Player                    player   {};
+    Camera                    camera   {};
+    GameMap                   map      {};
+    std::vector<SDL_Texture*> textures {};
+    ExternalInput             input    {};
 };
 
 void InitImgui(GameState* game){
@@ -107,6 +109,31 @@ void InitMap(GameState* game){
 
 void InitPlayer(GameState* game){
     game->player = {2.0,2.0};
+}
+
+void InitTextures(GameState* game){
+    // Create player texture
+    SDL_Texture* playerTexture{
+        SDL_CreateTexture(game->renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, 1, 1)
+    };
+    SDL_SetRenderTarget(game->renderer, playerTexture);
+    SDL_SetRenderDrawColor(game->renderer, 0, 0, 255, SDL_ALPHA_OPAQUE);
+    SDL_RenderClear(game->renderer);
+
+    // Create cell texture
+    SDL_Texture* cellTexture {
+        SDL_CreateTexture(game->renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, 1, 1)
+    };
+    SDL_SetRenderTarget(game->renderer, cellTexture);
+    SDL_SetRenderDrawColor(game->renderer, 0, 255, 0, SDL_ALPHA_OPAQUE);
+    SDL_RenderClear(game->renderer);
+
+    // Reset renderer target to the main window
+    SDL_SetRenderTarget(game->renderer, NULL);
+
+    // Add textures to the game state
+    game->textures.push_back(playerTexture);
+    game->textures.push_back(cellTexture);
 }
 
 void UpdateCamera(Camera& camera, GameState* game){
@@ -178,6 +205,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv) {
     InitMap(game);
     InitPlayer(game);
     UpdateCamera(game->camera, game);
+    InitTextures(game);
 
     *appstate = game;
 
