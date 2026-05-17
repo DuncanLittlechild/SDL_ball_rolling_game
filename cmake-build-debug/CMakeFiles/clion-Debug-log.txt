@@ -1,0 +1,4 @@
+/snap/clion/439/bin/cmake/linux/x64/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=/snap/clion/439/bin/ninja/linux/x64/ninja -DCMAKE_CXX_COMPILER=g++ -G Ninja -S /home/duncan/Documents/projects/SDL_ball_rolling_game/SDL_ball_rolling_game -B /home/duncan/Documents/projects/SDL_ball_rolling_game/SDL_ball_rolling_game/cmake-build-debug
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/duncan/Documents/projects/SDL_ball_rolling_game/SDL_ball_rolling_game/cmake-build-debug
