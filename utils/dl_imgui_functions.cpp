@@ -4,7 +4,7 @@
 #include "project_utils.h"
 
 
-void InitImgui(GameState* game){
+void InitImgui(GameState* game) {
     // Basic setup
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -16,19 +16,17 @@ void InitImgui(GameState* game){
     //style.FontScaleDpi = GameSettings::INITIALSCALE;
     ImGui::StyleColorsDark();
 
+    // Enable keyboard navigation in imgui
+    ImGuiIO& io {ImGui::GetIO()};
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+
     // Initialise ImGui globals for SDL
     ImGui_ImplSDL3_InitForSDLRenderer(game->window, game->renderer);
     ImGui_ImplSDLRenderer3_Init(game->renderer);
 }
 
-void DrawImgui(GameState* game){
-    // Prepare the backend for a new frame
-    ImGui_ImplSDLRenderer3_NewFrame();
-    ImGui_ImplSDL3_NewFrame();
-    // USes the data create in the prior step to prepare
-    // ImGui for new widget commands
-    ImGui::NewFrame();
-
+// Draws Imgui window that displays stats
+void DrawImguiStatDisplay(GameState* game) {
     //ImGui::ShowDemoWindow();
     // Create widgets for game settings
     ImGui::Begin("Adjust Settings");
@@ -47,10 +45,13 @@ void DrawImgui(GameState* game){
     }
 
     ImGui::End();
+}
 
+// Draws imgui window that allows map to be edited
+void DrawImguiMapEditor(GameState* game) {
     ImGui::Begin("Adjust Map");
     // Resize the map and wipe its contents
-    ImGui::InputInt("New Map Dimensions: %i", &GLOBALIMGUIPARAMS.newMapSize);
+    ImGui::InputInt("New Map Dimensions: %d", &GLOBALIMGUIPARAMS.newMapSize);
 
     // If the button is pressed, the new map is sufficiently large, and the player would be inside it, resize the map
     if (ImGui::Button("Adjust Map Size")
@@ -58,41 +59,29 @@ void DrawImgui(GameState* game){
         && (int)(game->player.pos.x + GLOBALGAMESETTINGS.playerSizeFactor) < GLOBALIMGUIPARAMS.newMapSize
         && (int)(game->player.pos.y + GLOBALGAMESETTINGS.playerSizeFactor) < GLOBALIMGUIPARAMS.newMapSize) {
         game->map.m = CreateStartingMap(GLOBALIMGUIPARAMS.newMapSize);
-    }
+        }
     // Button to pause the game and start the map editor
-    if (ImGui::Button("Edit Map")) {
-        game->state = GAME_PAUSED;
+    if (game->state != GAME_MAP_EDIT && ImGui::Button("Edit Map")) {
+        game->state = GAME_MAP_EDIT;
         GLOBALIMGUIPARAMS.showMapEditWindow = true;
     }
-    if (GLOBALIMGUIPARAMS.showMapEditWindow) {
-        ImGui::Text("Adjust Map Layout");
-        std::size_t height{game->map.m.size()};
-        std::size_t width{game->map.m[0].size()};
-        for (auto y {0uz}; y < height; ++y) {
-            for (auto x {0uz}; x < width; ++x) {
-                ImGui::PushID(y * width + x);
-                int& cell {(int&)game->map.m[y][x]};
-                ImGui::SetNextItemWidth(30);
-                ImGui::InputInt("##t", &cell, 0, 0);
-                if (x < width - 1) {
-                    ImGui::SameLine();
-                }
-                ImGui::PopID();
-            }
-        }
-
-        if (ImGui::Button("Set new map layout")) {
-            // If the player would be in a wall when the game loaded, it would cause an immediate segfault
-            if (!PlayerInWall(game)) {
-                game->state = GAME_PLAYING;
-                GLOBALIMGUIPARAMS.showMapEditWindow = false;
-            }
-            else {
-                ImGui::OpenPopup("wall_placed_on_player_error");
-            }
-        }
+    else if (ImGui::Button("Exit edit mode")) {
+        game->state = GAME_PLAYING;
+        GLOBALIMGUIPARAMS.showMapEditWindow = false;
     }
     ImGui::End();
+}
+
+void DrawImgui(GameState* game){
+    // Prepare the backend for a new frame
+    ImGui_ImplSDLRenderer3_NewFrame();
+    ImGui_ImplSDL3_NewFrame();
+    // USes the data create in the prior step to prepare
+    // ImGui for new widget commands
+    ImGui::NewFrame();
+    DrawImguiStatDisplay(game);
+
+    DrawImguiMapEditor(game);
     // Popup to display the error caused by trying to place a wall in a player
     if (ImGui::BeginPopupModal("wall_placed_on_player_error", NULL,ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::Text("Unable to save new design - player would be inside a wall");

@@ -16,6 +16,7 @@ struct GameSettings {
     float velocityAdjustment {0.001f};
     float velocityMax {0.003f};
     Uint64 lastTime {0};
+    int circleSegments{10};
 };
 
 inline GameSettings GLOBALGAMESETTINGS{};
@@ -49,14 +50,6 @@ struct Mat3 {
     }
 };
 
-struct Camera2d {
-    SDL_FPoint pos {0.0f, 0.0f};
-    float screenW {static_cast<float>(GLOBALGAMESETTINGS.width)};
-    float screenH {static_cast<float>(GLOBALGAMESETTINGS.height)};
-    float zoom {GLOBALGAMESETTINGS.scale};
-    float rot {0.0f};
-};
-
 Mat3 GetScaleMat3 (float sX, float sY);
 
 Mat3 GetTranslateMat3 (float tX, float tY);
@@ -64,9 +57,30 @@ Mat3 GetTranslateMat3 (float tX, float tY);
 // Applies a 3x3 matrix to transform a point
 SDL_FPoint TransformPointMat3 (const Mat3& mat, float x, float y);
 
-//Use data stored in the camera strucrt to create a 3x3 camera matrix
-// All transforms set up here will be applied to every point in turn
-Mat3 GetCameraMatrix(const Camera2d& cam);
+Mat3 InvertMat3(const Mat3& mat);
+
+struct Camera2d {
+    Mat3 cameraMat {};
+    SDL_FPoint pos {0.0f, 0.0f};
+    float screenW {static_cast<float>(GLOBALGAMESETTINGS.width)};
+    float screenH {static_cast<float>(GLOBALGAMESETTINGS.height)};
+    float zoom {GLOBALGAMESETTINGS.scale};
+    float rot {0.0f};
+    //Use data stored in the camera strucrt to create a 3x3 camera matrix
+    // All transforms set up here will be applied to every point in turn
+    void UpdateCameraMatrix() {
+        // 1. Move the camera to the origin
+        Mat3 moveToOrigin {GetTranslateMat3(-pos.x, -pos.y)};
+
+        // 2. zoom at the origin
+        Mat3 zoomMat {GetScaleMat3(zoom, zoom)};
+
+        // 3. move the camera to the centre of the screen
+        Mat3 moveToCentreScreen {GetTranslateMat3(screenW / 2.0f, screenH / 2.0f)};
+
+        cameraMat = moveToCentreScreen * zoomMat * moveToOrigin;
+    }
+};
 
 ///////////////////////////////////
 //              CELL          //
@@ -76,7 +90,8 @@ enum CellType {
     CTYPE_EMPTY,
     CTYPE_WALL,
     CTYPE_SPAWN,
-    CTYPE_EXIT
+    CTYPE_EXIT,
+    CTYPE_MAX
 };
 
 struct Cell {
@@ -119,6 +134,10 @@ struct Player {
 //////////////////////////////////
 
 struct PlayerInput {
+    float playerMousePosX {0.0f};
+    float playerMousePosY {0.0f};
+    bool playerClick {false};
+    bool clickActive {false};
     bool lHeld {};
     bool rHeld {};
     bool uHeld {};
@@ -147,7 +166,8 @@ enum GameMode {
     GAME_LOADING,
     GAME_MENU,
     GAME_PAUSED,
-    GAME_QUITTING
+    GAME_QUITTING,
+    GAME_MAP_EDIT
 };
 
 struct GameState {
@@ -170,6 +190,7 @@ struct ImGuiParameters {
     GameSettings gameSettings {GLOBALGAMESETTINGS};
     int newMapSize {0};
     bool showMapEditWindow {false};
+    int circleSegments{GLOBALGAMESETTINGS.circleSegments};
 };
 inline ImGuiParameters GLOBALIMGUIPARAMS{};
 

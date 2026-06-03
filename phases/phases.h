@@ -20,6 +20,9 @@ void UpdateCamera(Camera2d& camera, GameState* game);
 
 void UpdatePlayer(GameState* game, float deltaTime);
 
+// Updates the map if the player is in map edit mode
+void UpdateMap(GameState* game);
+
 /////////////////////////
 //        DRAW         //
 ////////////////////////
@@ -27,7 +30,7 @@ void DrawMap (GameState* game, Mat3& cameraMat);
 
 void DrawPlayer (GameState* game, Mat3& cameraMat);
 
-void DrawGame(GameState* game, Mat3& cameraMat);
+void DrawGame(GameState* game);
 
 /////////////////////////
 //        EXIT        //

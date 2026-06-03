@@ -5,6 +5,7 @@
 #include "project_utils.h"
 
 #include <cassert>
+#include <algorithm>
 
 #include "project_structs.h"
 
@@ -61,3 +62,112 @@ bool PlayerInWall(GameState* game) {
     }
     return isInWall;
 }
+
+bool DetectPlayerCollisions(const SDL_FPoint c, const float r, std::vector<SDL_FPoint>* collisionNorms, const GameMap& map) {
+    // Get all solid cells that are within a square drawn around the circle of centre c and radius r
+    float rSquared {r * r};
+    bool playerCollides {false};
+
+    float playerYMin {c.y - GLOBALGAMESETTINGS.playerSizeFactor};
+    float playerXMin {c.x - GLOBALGAMESETTINGS.playerSizeFactor};
+    float playerYMax {c.y + GLOBALGAMESETTINGS.playerSizeFactor};
+    float playerXMax {c.x + GLOBALGAMESETTINGS.playerSizeFactor};
+
+    std::vector<SDL_FPoint> solidCells {};
+    solidCells.reserve(8);
+
+    for (int y = playerYMin; y <= (int)playerYMax; ++y) {
+        for (int x = playerXMin; x <= (int)playerXMax; ++x) {
+            if (map.m[y][x].tp == CTYPE_WALL) {
+                solidCells.emplace_back(x, y);
+            }
+        }
+    }
+
+    // For each solid cell, find the closest point with the clamp method
+    for (auto& cell : solidCells) {
+        float cellXMax {cell.x + 1.0f};
+        float cellYMax {cell.y + 1.0f};
+        SDL_FPoint closestPoint {
+            std::ranges::max(cell.x, std::ranges::min(cellXMax, c.x)),
+            std::ranges::max(cell.y, std::ranges::min(cellYMax, c.y))
+        };
+        // If the distance to the closest point squared is equal to or less than the radius squared, there is a collision
+        float xDist {closestPoint.x - c.x};
+        float yDist {closestPoint.y - c.y};
+        float distanceSquared {xDist * xDist + yDist * yDist};
+        if (distanceSquared < rSquared) {
+            playerCollides = true;
+            // If collisionNorms is null, DetectCollision is being used just to tell if a collision exists
+            if (collisionNorms != nullptr) {
+                // Determine the surface normal vector from the collision surface
+                // Checks to see if the closest point is on an edge
+                // First check to see if the collisionc++ round float down is on the y axis
+                if ((closestPoint.y == cell.y || closestPoint.y == cellYMax)
+                    && (closestPoint.x > cell.x && closestPoint.x < cellXMax)) {
+                    collisionNorms->emplace_back(0.0f, c.y < cell.y ? -1.0f : 1.0f);
+                }
+                // Then check the x axis
+                else if ((closestPoint.x == cell.x || closestPoint.x == cellXMax)
+                        && (closestPoint.y > cell.y && closestPoint.y < cellYMax)) {
+                    collisionNorms->emplace_back(c.x < cell.x ? -1.0f : 1.0f, 0.0f);
+                }
+                // If it is heading towards a corner, determine if it is more x or y, then rebound in that direction
+                // if ydiff is less than xdiff, it is rebounding in the x axis
+                else  {
+                    float yNorthDist {std::abs(c.y - cell.y)};
+                    float ySouthDist {std::abs(c.y - cellYMax)};
+                    float xWestDist {std::abs(c.x - cell.x)};
+                    float xEastDist {std::abs(c.x - cellXMax)};
+                    float yDiff {std::ranges::min(yNorthDist, ySouthDist)};
+                    float xDiff {std::ranges::min(xWestDist, xEastDist)};
+                    if (yDiff < xDiff) {
+                        collisionNorms->emplace_back(xWestDist > xEastDist ? -1.0f : 1.0f, 0.0f);
+                    }
+                    else {
+                        collisionNorms->emplace_back(0.0f, yNorthDist > ySouthDist ? -1.0f : 1.0f);
+                    }
+                }
+
+                // if the absolute difference between c.x and either the min or max is less than the equivalent for
+                // y, it is rebounding in the y axis. In the opposite case, it is rebounding in the x axis
+            }
+            else {
+                break;
+            }
+        }
+    }
+    return playerCollides;
+}
+
+void DrawCircle(SDL_Renderer* renderer, SDL_FPoint centre, float radius, SDL_FColor color) {
+    // use radius to determine number of segments
+    int segments {GLOBALGAMESETTINGS.circleSegments};
+    std::vector<SDL_Vertex> vertices (segments + 2, SDL_Vertex{});
+
+    // Create central vertex
+    vertices[0] = {
+        centre,
+        color,
+        SDL_FPoint{0.0f, 0.0f}
+    };
+    // Create fan of outlying vertices using good ole trig
+    for (int i {0}; i <= segments; ++i) {
+        float angle {2.0f * SDL_PI_F * i / (float)(segments)};
+        vertices[i + 1] = {
+            SDL_FPoint{SDL_cosf(angle) * radius + centre.x, SDL_sinf(angle) * radius + centre.y},
+            color,
+            SDL_FPoint{0.0f, 0.0f}
+        };
+    }
+    // Create array of indices to use to draw the circle
+    std::vector<int> indices (segments * 3, 0);
+    for (int i {0}; i < (segments); ++i) {
+        indices[i * 3] = 0;
+        indices[i * 3 + 1] = i + 1;
+        indices[i * 3 + 2] = i + 2;
+    }
+    SDL_RenderGeometry(renderer,NULL, vertices.data(), segments + 2, indices.data(), segments * 3);
+}
+
+

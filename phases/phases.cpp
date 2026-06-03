@@ -1,4 +1,9 @@
 #include "phases.h"
+
+#include <iostream>
+#include <ostream>
+#include <cmath>
+
 #include "project_utils.h"
 
 ///////////////////////////////////
@@ -62,6 +67,8 @@ void UpdateCamera(Camera2d& camera, GameState* game){
     if (camera.screenW != GLOBALGAMESETTINGS.width){
         camera.screenW = GLOBALGAMESETTINGS.width;
     }
+
+    camera.UpdateCameraMatrix();
 }
 
 
@@ -97,40 +104,75 @@ void UpdatePlayer(GameState* game, float deltaTime) {
 
     // Use velocity to update player position
     SDL_FPoint newPosition {player.pos.x + (player.vel.x / deltaTime), player.pos.y + (player.vel.y / deltaTime)};
+    float halfPlayerSize {(GLOBALGAMESETTINGS.playerSizeFactor / 2.0f)};
+    std::vector<SDL_FPoint> collisionNorms {};
+    bool playerCollides {DetectPlayerCollisions(
+        {newPosition.x + halfPlayerSize, newPosition.y + halfPlayerSize},
+        halfPlayerSize,
+        &collisionNorms,
+        game->map
+    )};
 
-    // Playersize is the relative size of a player compared to a cell. A cell is of size 1
-    float playerSize {GLOBALGAMESETTINGS.playerSizeFactor};
-    float halfPlayerSize{playerSize/2.0f};
-    SDL_FPoint collisionOffsets[4] {
-        {halfPlayerSize, 0.0f}, // North
-        {playerSize, halfPlayerSize}, // East
-        {halfPlayerSize, playerSize}, // South
-        {0.0f, halfPlayerSize} // West
-    };
-    // check for collisions
-    bool yUpdate {true};
-    bool xUpdate {true};
-    for (auto& offset : collisionOffsets) {
-        SDL_FPoint cardinalPoint {newPosition.x + offset.x, newPosition.y + offset.y};
-        if (game->map.m[static_cast<std::size_t>(cardinalPoint.y)][static_cast<std::size_t>(cardinalPoint.x)].tp == CTYPE_WALL) {
-            if (offset.x == halfPlayerSize) {
-                player.vel.y = -(player.vel.y * 0.1);
-                yUpdate = false;
-            }
-            if (offset.y == halfPlayerSize) {
-                player.vel.x = -(player.vel.x * 0.1);
-                xUpdate = false;
-            }
+    // If the player collides in its new position, adjust velocity away from the collisionDirs
+    if (playerCollides) {
+        std::vector<SDL_FPoint> newVelocities (collisionNorms.size(), player.vel);
+        // Adjust velocity by using the dot product of the collision norms
+        // the formula is velocity - 2 * dot product of velocity and normal * normal
+        for (auto i {0uz}; i < collisionNorms.size(); ++i) {
+            float dotProd {newVelocities[i].x * collisionNorms[i].x + newVelocities[i].y * collisionNorms[i].y};
+            newVelocities[i].x -= 2.0f * dotProd * collisionNorms[i].x;
+            newVelocities[i].y -= 2.0f * dotProd * collisionNorms[i].y;
         }
+        // Get the average of the new velocities, and set player velocity to that
+        SDL_FPoint total {newVelocities[0]};
+        for (auto i {1uz}; i < newVelocities.size(); ++i) {
+            total.x += newVelocities[i].x;
+            total.y += newVelocities[i].y;
+        }
+        total.x /= newVelocities.size();
+        total.y /= newVelocities.size();
+        player.vel.x = total.x;
+        player.vel.y = total.y;
     }
-    if (yUpdate) {
-        player.pos.y = newPosition.y;
-    }
-    if (xUpdate) {
+    else {
         player.pos.x = newPosition.x;
+        player.pos.y = newPosition.y;
     }
     // Collisions will need to
     // If there are collisions, update position and velocity to reflect this
+}
+
+void UpdateMap(GameState *game) {
+    // Get the position of the mouse in render space
+    float screenX, screenY;
+    SDL_GetMouseState(&screenX, &screenY);
+
+    float renderX, renderY;
+    SDL_RenderCoordinatesFromWindow(game->renderer, screenX, screenY, &renderX, &renderY);
+
+    // Invert the camera matrix to translate the render position into simulated space
+    Mat3 camInv {InvertMat3(game->camera.cameraMat)};
+
+    SDL_FPoint simPos {TransformPointMat3(camInv, renderX, renderY)};
+
+    // If the simulated point is within the map matrix, then operations can proceed
+    if (simPos.x >= 0 && simPos.x < game->map.m[0].size() && simPos.y >= 0 && simPos.y < game->map.m.size()) {
+        // If the player has clicked on a square, change its type. Otherwise, highlight the square to be targetted
+        if (game->input.playerClick) {
+            auto& targetCell {game->map.m[(int)simPos.y][(int)simPos.x]};
+            targetCell.tp = (CellType)((targetCell.tp + 1) % CTYPE_MAX);
+        }
+        else {
+            SDL_FPoint boxScreenPos {TransformPointMat3(game->camera.cameraMat, (int)simPos.x, (int)simPos.y)};
+            SDL_FRect box {boxScreenPos.x, boxScreenPos.y, game->camera.zoom, game->camera.zoom};
+            SDL_SetRenderDrawColorFloat(game->renderer,1.0f,1.0f,1.0f,1.0f);
+            SDL_RenderRect(game->renderer, &box);
+            SDL_SetRenderDrawColor(game->renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
+        }
+    }
+
+    // Reset playerclick to make sure the event does not constantly fire
+    game->input.playerClick = false;
 }
 
 /////////////////////////
@@ -161,11 +203,17 @@ void DrawPlayer (GameState* game, Mat3& cameraMat) {
     const auto& player {game->player};
     SDL_FPoint screenPos{TransformPointMat3(cameraMat, player.pos.x, player.pos.y)};
     float playerSize {GLOBALGAMESETTINGS.playerSizeFactor * GLOBALGAMESETTINGS.scale};
-    SDL_FRect target {screenPos.x, screenPos.y, playerSize, playerSize};
-    SDL_RenderTexture(game->renderer, game->textures[0], NULL, &target);
+    float halfPlayerSize {playerSize/2.0f};
+    SDL_FPoint centre {screenPos.x + halfPlayerSize, screenPos.y + halfPlayerSize};
+    DrawCircle(game->renderer, centre, halfPlayerSize);
+    //SDL_FRect target {screenPos.x, screenPos.y, playerSize, playerSize};
+    //SDL_RenderTexture(game->renderer, game->textures[0], NULL, &target);
 }
 
-void DrawGame (GameState* game, Mat3& cameraMat) {
+void DrawGame (GameState* game) {
+    UpdateCamera(game->camera, game);
+    Mat3 cameraMat {game->camera.cameraMat};
+
     DrawMap(game, cameraMat);
     DrawPlayer(game, cameraMat);
 }

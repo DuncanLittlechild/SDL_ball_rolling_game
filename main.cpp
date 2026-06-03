@@ -88,6 +88,15 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event){
                 }break;
             }
         } break;
+        case (SDL_EVENT_MOUSE_BUTTON_DOWN): {
+            switch (event->button.button) {
+                case (SDL_BUTTON_LEFT): {
+                    if (!ImGui::GetIO().WantCaptureMouse) {
+                        game->input.playerClick = true;
+                    }
+                }
+            }
+        } break;
         case (SDL_EVENT_QUIT): {
             return SDL_APP_SUCCESS;
         } break;
@@ -104,22 +113,22 @@ SDL_AppResult SDL_AppIterate(void* appstate){
     Uint64 currentTime {SDL_GetPerformanceCounter()};
     float deltaTime {(currentTime - GLOBALGAMESETTINGS.lastTime) / (float)SDL_GetPerformanceFrequency()};
     GLOBALGAMESETTINGS.lastTime = currentTime;
+
     switch (game->state) {
         case(GAME_PLAYING): {
             // Update player velocity and position
             UpdatePlayer(game, deltaTime);
             // Update camera matrix
-            UpdateCamera(game->camera, game);
-            Mat3 cameraMat {GetCameraMatrix(game->camera)};
             // Draw map
-            DrawGame(game, cameraMat);
+            DrawGame(game);
         } break;
-        case(GAME_PAUSED): {
-            // Update camera matrix
-            UpdateCamera(game->camera, game);
-            Mat3 cameraMat {GetCameraMatrix(game->camera)};
-            // Draw map
-            DrawGame(game, cameraMat);
+        case (GAME_MAP_EDIT): {
+            DrawGame(game);
+            UpdateMap(game);
+        } break;
+        // By default, show the map and the camera but don't update player position
+        default: {
+            DrawGame(game);
         }
     }
 

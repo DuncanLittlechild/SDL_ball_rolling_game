@@ -24,6 +24,32 @@ Mat3 GetTranslateMat3 (float tX, float tY){
     return transformMat;
 }
 
+Mat3 InvertMat3(const Mat3& m) {
+    // Source - https://stackoverflow.com/a/18504573
+    // Posted by Cornstalks
+    // Retrieved 2026-06-03, License - CC BY-SA 3.0
+
+    // computes the inverse of a matrix m
+    float det = m[0, 0] * (m[1, 1] * m[2, 2] - m[2, 1] * m[1, 2]) -
+                 m[0, 1] * (m[1, 0] * m[2, 2] - m[1, 2] * m[2, 0]) +
+                 m[0, 2] * (m[1, 0] * m[2, 1] - m[1, 1] * m[2, 0]);
+
+    float invdet = 1 / det;
+
+    Mat3 minv{}; // inverse of matrix m
+    minv[0, 0] = (m[1, 1] * m[2, 2] - m[2, 1] * m[1, 2]) * invdet;
+    minv[0, 1] = (m[0, 2] * m[2, 1] - m[0, 1] * m[2, 2]) * invdet;
+    minv[0, 2] = (m[0, 1] * m[1, 2] - m[0, 2] * m[1, 1]) * invdet;
+    minv[1, 0] = (m[1, 2] * m[2, 0] - m[1, 0] * m[2, 2]) * invdet;
+    minv[1, 1] = (m[0, 0] * m[2, 2] - m[0, 2] * m[2, 0]) * invdet;
+    minv[1, 2] = (m[1, 0] * m[0, 2] - m[0, 0] * m[1, 2]) * invdet;
+    minv[2, 0] = (m[1, 0] * m[2, 1] - m[2, 0] * m[1, 1]) * invdet;
+    minv[2, 1] = (m[2, 0] * m[0, 1] - m[0, 0] * m[2, 1]) * invdet;
+    minv[2, 2] = (m[0, 0] * m[1, 1] - m[1, 0] * m[0, 1]) * invdet;
+
+    return minv;
+}
+
 // Applies a 3x3 matrix to transform a point
 SDL_FPoint TransformPointMat3 (const Mat3& mat, float x, float y){
     float pMat [3]{x, y, 1};
@@ -34,21 +60,6 @@ SDL_FPoint TransformPointMat3 (const Mat3& mat, float x, float y){
         }
     }
     return {output[0], output[1]};
-}
-
-//Use data stored in the camera strucrt to create a 3x3 camera matrix
-// All transforms set up here will be applied to every point in turn
-Mat3 GetCameraMatrix(const Camera2d& cam){
-    // 1. Move the camera to the origin
-    Mat3 moveToOrigin {GetTranslateMat3(-cam.pos.x, -cam.pos.y)};
-
-    // 2. zoom at the origin
-    Mat3 zoomMat {GetScaleMat3(cam.zoom, cam.zoom)};
-
-    // 3. move the camera to the centre of the screen
-    Mat3 moveToCentreScreen {GetTranslateMat3(cam.screenW / 2.0f, cam.screenH / 2.0f)};
-
-    return moveToCentreScreen * zoomMat * moveToOrigin;
 }
 
 ////////////////////////////////
