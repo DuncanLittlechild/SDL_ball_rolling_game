@@ -6,6 +6,8 @@
 
 #include <cassert>
 #include <algorithm>
+#include <fstream>
+#include <iostream>
 
 #include "project_structs.h"
 
@@ -39,6 +41,31 @@ SDL_FPoint SDL_FPointClamp(SDL_FPoint& point) {
         point.y = (point.y * GLOBALGAMESETTINGS.velocityMax) / pointMagnitude;
     }
     return point;
+}
+
+////////////////////////////////////
+//        FILEIO UTILS         //
+////////////////////////////////////
+
+// Iterate over the vector and save it to an external file
+void SaveGameMap(const GameMap& map) {
+    std::ofstream outFile{"startingMap.txt"};
+    if (!outFile) {
+        std::cerr<< "Error opening file to save";
+        return;
+    }
+
+    for (int i {0}; i < map.Height(); ++i) {
+        for (int j {0}; j < map.Width(); ++j) {
+            outFile << map.m[i][j].tp;
+        }
+        outFile << "\n";
+    }
+    outFile.close();
+}
+
+void LoadGameMap(con`st GameMap& map) {
+
 }
 
 bool PlayerInWall(GameState* game) {

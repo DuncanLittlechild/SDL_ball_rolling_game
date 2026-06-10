@@ -66,14 +66,42 @@ SDL_FPoint TransformPointMat3 (const Mat3& mat, float x, float y){
 //              MAP          //
 ///////////////////////////////
 
-std::vector<std::vector<Cell>> CreateStartingMap(int dim) {
+void ChangeMapSize (GameMap* map, int h, int w) {
+    if (h == map->Height() && w == map->Width()) {
+        return;
+    }
+
+    // Check if the map needs resizing in either dimension
+    if (h < map->Height() || h > map->Height()) {
+        map->m.resize(h);
+    }
+    if (w < map->Width() || w > map->Width()) {
+        for (auto& row : map->m) {
+            row.resize(w);
+        }
+    }
+
+    // Go around the edge and check that all edge squares are walls. If they are not, make them so
+    for (int y {0}; y < h; ++y) {
+        for (int x {0}; x < w; ++x) {
+            if (y == 0 || x == 0 || y == h - 1 || x == w - 1) {
+                map->m[y][x].tp = static_cast<CellType>(1);
+            }
+            else {
+                map->m[y][x].tp = static_cast<CellType>(0);
+            }
+        }
+    }
+}
+
+std::vector<std::vector<Cell>> CreateStartingMap(int h, int w) {
     std::vector<std::vector<Cell>> map {};
-    map.reserve(dim);
-    for (int y {0}; y < dim; ++y) {
+    map.reserve(h);
+    for (int y {0}; y < h; ++y) {
         std::vector<Cell> row {};
-        row.reserve(dim);
-        for (int x {0}; x < dim; ++x) {
-            if (y == 0 || x == 0 || y == dim - 1 || x == dim - 1) {
+        row.reserve(w);
+        for (int x {0}; x < w; ++x) {
+            if (y == 0 || x == 0 || y == h - 1 || x == w - 1) {
                 row.push_back({static_cast<CellType>(1)});
             }
             else {

@@ -21,6 +21,13 @@ SDL_FPoint SDL_FPointNormalise(SDL_FPoint& point);
 
 SDL_FPoint SDL_FPointClamp(SDL_FPoint& point);
 
+////////////////////////////////////
+//        FILEIO UTILS         //
+////////////////////////////////////
+
+void SaveGameMap(const GameMap& map);
+
+void LoadGameMap(const GameMap& map);
 
 bool PlayerInWall(GameState* game);
 

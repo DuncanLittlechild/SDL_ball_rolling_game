@@ -51,15 +51,17 @@ void DrawImguiStatDisplay(GameState* game) {
 void DrawImguiMapEditor(GameState* game) {
     ImGui::Begin("Adjust Map");
     // Resize the map and wipe its contents
-    ImGui::InputInt("New Map Dimensions: %d", &GLOBALIMGUIPARAMS.newMapSize);
+    ImGui::InputInt("New Map Height: %d", &GLOBALIMGUIPARAMS.mapHeight);
+    ImGui::InputInt("New Map Width: %d", &GLOBALIMGUIPARAMS.mapWidth);
 
     // If the button is pressed, the new map is sufficiently large, and the player would be inside it, resize the map
     if (ImGui::Button("Adjust Map Size")
-        && GLOBALIMGUIPARAMS.newMapSize > 4
-        && (int)(game->player.pos.x + GLOBALGAMESETTINGS.playerSizeFactor) < GLOBALIMGUIPARAMS.newMapSize
-        && (int)(game->player.pos.y + GLOBALGAMESETTINGS.playerSizeFactor) < GLOBALIMGUIPARAMS.newMapSize) {
-        game->map.m = CreateStartingMap(GLOBALIMGUIPARAMS.newMapSize);
-        }
+        && GLOBALIMGUIPARAMS.mapWidth > 4
+        && GLOBALIMGUIPARAMS.mapHeight > 4
+        && (int)(game->player.pos.x + GLOBALGAMESETTINGS.playerSizeFactor) < GLOBALIMGUIPARAMS.mapWidth
+        && (int)(game->player.pos.y + GLOBALGAMESETTINGS.playerSizeFactor) < GLOBALIMGUIPARAMS.mapHeight) {
+        ChangeMapSize(&game->map, GLOBALIMGUIPARAMS.mapHeight, GLOBALIMGUIPARAMS.mapWidth);
+    }
     // Button to pause the game and start the map editor
     if (game->state != GAME_MAP_EDIT && ImGui::Button("Edit Map")) {
         game->state = GAME_MAP_EDIT;

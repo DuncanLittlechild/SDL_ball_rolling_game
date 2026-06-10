@@ -114,11 +114,16 @@ inline std::vector<std::vector<char>> startingMap {{
     {{1, 1, 1, 1, 1, 1, 1}},
 }};
 
-std::vector<std::vector<Cell>> CreateStartingMap(int dim);
+std::vector<std::vector<Cell>> CreateStartingMap(int h, int w);
 
 struct GameMap {
     std::vector<std::vector<Cell>> m {};
+
+    std::size_t Height () const {return m.size();}
+    std::size_t Width () const {return m[0].size();}
 };
+
+void ChangeMapSize(GameMap* map, int h, int w);
 
 ///////////////////////////////////
 //           PLAYER              //
@@ -188,7 +193,8 @@ struct GameState {
 // Only there to ensure that parameters persist over multiple game loops
 struct ImGuiParameters {
     GameSettings gameSettings {GLOBALGAMESETTINGS};
-    int newMapSize {0};
+    int mapHeight {0};
+    int mapWidth {0};
     bool showMapEditWindow {false};
     int circleSegments{GLOBALGAMESETTINGS.circleSegments};
 };
