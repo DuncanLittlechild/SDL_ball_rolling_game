@@ -1,3 +1,0 @@
-/home/duncan/Documents/projects/SDL_ball_rolling_game/SDL_ball_rolling_game/cmake-build-debug/CMakeFiles/SDL_ball_rolling_game.dir
-/home/duncan/Documents/projects/SDL_ball_rolling_game/SDL_ball_rolling_game/cmake-build-debug/CMakeFiles/edit_cache.dir
-/home/duncan/Documents/projects/SDL_ball_rolling_game/SDL_ball_rolling_game/cmake-build-debug/CMakeFiles/rebuild_cache.dir
