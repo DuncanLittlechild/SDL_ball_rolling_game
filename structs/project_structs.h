@@ -2,6 +2,7 @@
 #define PROJECT_STRUCTS_H
 #include "SDL3/SDL_rect.h"
 #include <SDL3/SDL.h>
+#include <string>
 #include <string_view>
 
 ///////////////////////////////////
@@ -91,6 +92,7 @@ enum CellType {
     CTYPE_WALL,
     CTYPE_SPAWN,
     CTYPE_EXIT,
+    CTYPE_DROP,
     CTYPE_MAX
 };
 
@@ -132,6 +134,7 @@ void ChangeMapSize(GameMap* map, int h, int w);
 struct Player {
     SDL_FPoint pos {};
     SDL_FPoint vel {};
+    Uint32 flags {0};
 };
 
 ///////////////////////////////////
@@ -191,8 +194,10 @@ struct GameState {
 ////////////////////////////////////
 // Struct to hold parameters adjusted by imgui
 // Only there to ensure that parameters persist over multiple game loops
+constexpr int maxMapNameLength{64};
 struct ImGuiParameters {
     GameSettings gameSettings {GLOBALGAMESETTINGS};
+    char mapName[maxMapNameLength];
     int mapHeight {0};
     int mapWidth {0};
     bool showMapEditWindow {false};
@@ -200,4 +205,11 @@ struct ImGuiParameters {
 };
 inline ImGuiParameters GLOBALIMGUIPARAMS{};
 
+
+///////////////////////////////////
+//           CONSTANTS           //
+//////////////////////////////////
+constexpr float FRICTION {0.95f};
+
+constexpr float REBOUNDFRICTION {0.1f};
 #endif

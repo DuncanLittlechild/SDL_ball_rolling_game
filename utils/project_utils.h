@@ -8,6 +8,7 @@
 #include <SDL3/SDL.h>
 
 #include "project_structs.h"
+#include <string>
 ////////////////////////////////////
 //        SDLFPOINT UTILS         //
 ////////////////////////////////////
@@ -24,10 +25,11 @@ SDL_FPoint SDL_FPointClamp(SDL_FPoint& point);
 ////////////////////////////////////
 //        FILEIO UTILS         //
 ////////////////////////////////////
+constexpr char startingMapName[]  {"startingMap.txt"};
 
-void SaveGameMap(const GameMap& map);
+bool SaveGameMap(const GameMap& map, const char fileString[]);
 
-void LoadGameMap(const GameMap& map);
+bool LoadGameMap(GameMap& map, const char fileString[]);
 
 bool PlayerInWall(GameState* game);
 

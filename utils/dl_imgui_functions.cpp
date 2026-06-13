@@ -63,13 +63,23 @@ void DrawImguiMapEditor(GameState* game) {
         ChangeMapSize(&game->map, GLOBALIMGUIPARAMS.mapHeight, GLOBALIMGUIPARAMS.mapWidth);
     }
     // Button to pause the game and start the map editor
-    if (game->state != GAME_MAP_EDIT && ImGui::Button("Edit Map")) {
-        game->state = GAME_MAP_EDIT;
-        GLOBALIMGUIPARAMS.showMapEditWindow = true;
+    if (game->state != GAME_MAP_EDIT) {
+        if (ImGui::Button("Edit Map")) {
+            game->state = GAME_MAP_EDIT;
+            GLOBALIMGUIPARAMS.showMapEditWindow = true;
+        }
     }
     else if (ImGui::Button("Exit edit mode")) {
         game->state = GAME_PLAYING;
         GLOBALIMGUIPARAMS.showMapEditWindow = false;
+    }
+    ImGui::InputText("Map name", GLOBALIMGUIPARAMS.mapName, maxMapNameLength);
+    // todo:: add in safeguards to ensure that maps which would cause the player to spawn inside a block cannot be saved
+    if (ImGui::Button("Save Map")) {
+        SaveGameMap(game->map, GLOBALIMGUIPARAMS.mapName);
+    }
+    if (ImGui::Button("Load Map")) {
+        LoadGameMap(game->map, GLOBALIMGUIPARAMS.mapName);
     }
     ImGui::End();
 }

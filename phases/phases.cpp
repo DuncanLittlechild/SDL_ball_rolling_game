@@ -11,17 +11,7 @@
 //////////////////////////////////
 
 void InitMap(GameState* game){
-    std::vector<std::vector<Cell>> tmp {};
-    tmp.reserve(startingMap.size());
-    for (auto row : startingMap){
-        std::vector<Cell> r {};
-        r.reserve(startingMap[0].size());
-        for (auto c : row){
-            r.push_back(Cell{static_cast<CellType>(c)});
-        }
-        tmp.push_back(r);
-    }
-    game->map.m = tmp;
+    LoadGameMap(game->map, "");
 }
 
 void InitPlayer(GameState* game){
@@ -99,6 +89,13 @@ void UpdatePlayer(GameState* game, float deltaTime) {
         player.vel.x += velocityUpdate.x;
         player.vel.y += velocityUpdate.y;
     }
+    // otherwise, if velocity updates are effectively zero, apply friction
+    if (velocityUpdate.x < 1e-6 && velocityUpdate.x > -1e-6) {
+        player.vel.x *= FRICTION;
+    }
+    if (velocityUpdate.y < 1e-6 && velocityUpdate.y > -1e-6) {
+        player.vel.y *= FRICTION;
+    }
 
     SDL_FPointClamp(player.vel);
 
@@ -107,13 +104,14 @@ void UpdatePlayer(GameState* game, float deltaTime) {
     float halfPlayerSize {(GLOBALGAMESETTINGS.playerSizeFactor / 2.0f)};
     std::vector<SDL_FPoint> collisionNorms {};
     bool playerCollides {DetectPlayerCollisions(
-        {newPosition.x + halfPlayerSize, newPosition.y + halfPlayerSize},
+        {newPosition.x, newPosition.y},
         halfPlayerSize,
         &collisionNorms,
         game->map
     )};
 
     // If the player collides in its new position, adjust velocity away from the collisionDirs
+    // If it
     if (playerCollides) {
         std::vector<SDL_FPoint> newVelocities (collisionNorms.size(), player.vel);
         // Adjust velocity by using the dot product of the collision norms
@@ -122,6 +120,8 @@ void UpdatePlayer(GameState* game, float deltaTime) {
             float dotProd {newVelocities[i].x * collisionNorms[i].x + newVelocities[i].y * collisionNorms[i].y};
             newVelocities[i].x -= 2.0f * dotProd * collisionNorms[i].x;
             newVelocities[i].y -= 2.0f * dotProd * collisionNorms[i].y;
+            newVelocities[i].x *= REBOUNDFRICTION;
+            newVelocities[i].y *= REBOUNDFRICTION;
         }
         // Get the average of the new velocities, and set player velocity to that
         SDL_FPoint total {newVelocities[0]};
@@ -133,6 +133,31 @@ void UpdatePlayer(GameState* game, float deltaTime) {
         total.y /= newVelocities.size();
         player.vel.x = total.x;
         player.vel.y = total.y;
+    }
+    // If the player has moved into a new cell, use the cell type to determine what happens next.
+    // This is done to avoid checking every tick
+    else if (static_cast<int>(player.pos.x) != static_cast<int>(newPosition.x)
+            || static_cast<int>(player.pos.y) != static_cast<int>(newPosition.y)) {
+        // switch statement on the type of the grid cell the player's centre has
+        switch (game->map.m[static_cast<int>(newPosition.y)][static_cast<int>(newPosition.x)].tp) {
+            // Generate new map
+            case (CTYPE_EXIT): {
+
+            } break;
+            // die and return to spawn point
+            case (CTYPE_DROP): {
+
+            } break;
+            // Something has gone badly wrong and needs to reset
+            case (CTYPE_WALL): {
+
+            } break;
+            default: {
+
+            };
+        }
+        player.pos.x = newPosition.x;
+        player.pos.y = newPosition.y;
     }
     else {
         player.pos.x = newPosition.x;
@@ -204,8 +229,7 @@ void DrawPlayer (GameState* game, Mat3& cameraMat) {
     SDL_FPoint screenPos{TransformPointMat3(cameraMat, player.pos.x, player.pos.y)};
     float playerSize {GLOBALGAMESETTINGS.playerSizeFactor * GLOBALGAMESETTINGS.scale};
     float halfPlayerSize {playerSize/2.0f};
-    SDL_FPoint centre {screenPos.x + halfPlayerSize, screenPos.y + halfPlayerSize};
-    DrawCircle(game->renderer, centre, halfPlayerSize);
+    DrawCircle(game->renderer, screenPos, halfPlayerSize);
     //SDL_FRect target {screenPos.x, screenPos.y, playerSize, playerSize};
     //SDL_RenderTexture(game->renderer, game->textures[0], NULL, &target);
 }

@@ -47,12 +47,32 @@ SDL_FPoint SDL_FPointClamp(SDL_FPoint& point) {
 //        FILEIO UTILS         //
 ////////////////////////////////////
 
+// Formats the string chosen for the file name correctly
+std::string GetFileName (const char* fileString) {
+    int i {0};
+    std::string fileName {""};
+    while (fileString[i] != '\0') {
+        fileName += fileString[i];
+        ++i;
+    }
+    if (fileName == "" ) {
+        fileName = startingMapName;
+    }
+    else {
+        fileName += ".txt";
+    }
+    return fileName;
+}
+
 // Iterate over the vector and save it to an external file
-void SaveGameMap(const GameMap& map) {
-    std::ofstream outFile{"startingMap.txt"};
+// Currently saves map by converting each row into a line of integers, where the
+// integer in question is the underlying value of the type enum
+bool SaveGameMap(const GameMap& map, const char fileString[]) {
+    std::string fileName {GetFileName(fileString)};
+    std::ofstream outFile{fileName};
     if (!outFile) {
-        std::cerr<< "Error opening file to save";
-        return;
+        std::cerr<< "Error opening file to save\n";
+        return false;
     }
 
     for (int i {0}; i < map.Height(); ++i) {
@@ -62,10 +82,46 @@ void SaveGameMap(const GameMap& map) {
         outFile << "\n";
     }
     outFile.close();
+    return true;
 }
 
-void LoadGameMap(con`st GameMap& map) {
+// Loads a game map from a txt file.
+// Currently the map is encoded as lines of integers 0 to 9
+// with the interger corresponding to the type of the cell in question
+// and each line standing in for a row of the map array.
+bool LoadGameMap(GameMap& map, const char fileString[]) {
+    std::string fileName {GetFileName(fileString)};
+    std::ifstream inFile {fileName};
+    if (!inFile) {
+        std::cerr << "Error opening file to load\n";
+        return false;
+    }
 
+    // Creates a new map array from the relevant file.
+    // If any characters in the file are not in the char range 0-9, then the function
+    // returns false.
+    std::vector<std::vector<Cell>> newMap{};
+    newMap.reserve(map.Height());
+    std::string line{""};
+    int lineCount {1};
+    while (getline(inFile, line)) {
+        std::vector<Cell> row {};
+        row.reserve(line.size());
+        for (int i {0}; i < line.size(); ++i) {
+            if (line[i] < '0' || line[i] > '9') {
+                std::cerr << "Failed to load map: invalid character "<< line[i] << " in file "
+                         << fileName << " at line " << lineCount << ", character " << i <<  ".\n";
+                return false;
+            }
+            row.emplace_back(static_cast<CellType>((line[i] - '0')));
+        }
+        newMap.push_back(row);
+        ++lineCount;
+    }
+
+    map.m = newMap;
+
+    return true;
 }
 
 bool PlayerInWall(GameState* game) {
