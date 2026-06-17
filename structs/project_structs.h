@@ -3,6 +3,7 @@
 #include "SDL3/SDL_rect.h"
 #include <SDL3/SDL.h>
 #include <string>
+#include <array>
 #include <string_view>
 
 ///////////////////////////////////
@@ -123,6 +124,8 @@ struct GameMap {
 
     std::size_t Height () const {return m.size();}
     std::size_t Width () const {return m[0].size();}
+
+    bool PointInMap(const SDL_FPoint& point);
 };
 
 void ChangeMapSize(GameMap* map, int h, int w);
@@ -167,27 +170,106 @@ enum DirectionI {
 ///////////////////////////////////
 //           GAMEMEMORY         //
 //////////////////////////////////
-
-enum GameMode {
-    GAME_PLAYING,
-    GAME_INITIALISING,
-    GAME_LOADING,
-    GAME_MENU,
-    GAME_PAUSED,
-    GAME_QUITTING,
-    GAME_MAP_EDIT
-};
+class State;
 
 struct GameState {
-    SDL_Window*               window   {nullptr};
-    SDL_Renderer*             renderer {nullptr};
-    Player                    player   {};
-    Camera2d                  camera   {};
-    GameMap                   map      {};
-    std::vector<SDL_Texture*> textures {};
-    PlayerInput               input    {};
-    GameMode                  state    {GAME_PLAYING};
+    SDL_Window*                 window   {nullptr};
+    SDL_Renderer*               renderer {nullptr};
+    Player                      player   {};
+    Camera2d                    camera   {};
+    GameMap                     map      {};
+    std::vector<SDL_Texture*>   textures {};
+    PlayerInput                 input    {};
+    std::vector<std::size_t>    states   {};
+
+    State* GetCurrentState();
 };
+
+///////////////////////////////////
+//           STATES             //
+//////////////////////////////////
+enum StateRenderType {
+    STATE_RENDER_TYPE_OPAQUE,
+    STATE_RENDER_TYPE_TRANSPARENT,
+    STATE_RENDER_TYPE_EXCLUSIVE,
+    STATE_RENDER_TYPE_MAX
+};
+
+enum StateIndices {
+    STATE_PLAYINGSTATE,
+    STATE_MAPEDITSTATE,
+    STATE_MAX
+};
+
+class State {
+public:
+    virtual ~State() = default;
+
+    virtual void update(GameState* game, float deltaTime) {};
+    virtual void render(GameState* game) {};
+    virtual void onEnter(GameState* game) {};
+    virtual void onExit(GameState* game) {};
+
+    // An opaque state prevents states lower down the stack from being rendered, while a non-opaque state does not
+    virtual StateRenderType renderType() {return STATE_RENDER_TYPE_MAX; }
+    virtual StateIndices    GetStateEnum() { return STATE_MAX; }
+};
+
+// Dominant state for when the game is being played
+class PlayingState : public State {
+public:
+    ~PlayingState() override = default;
+
+    void update(GameState* game, float deltaTime) override;
+    void render(GameState* game) override;
+    void onEnter(GameState* game) override;
+    void onExit(GameState* game) override;
+
+    StateRenderType renderType() override { return STATE_RENDER_TYPE_OPAQUE; }
+    StateIndices    GetStateEnum() override { return STATE_PLAYINGSTATE; }
+};
+
+// State when the game is being edited
+class MapEditState : public State {
+public:
+    ~MapEditState() override = default;
+
+    void update(GameState* game, float deltaTime) override;
+    void render(GameState* game) override;
+    void onEnter(GameState* game) override;
+    void onExit(GameState* game) override;
+
+    StateRenderType renderType() override { return STATE_RENDER_TYPE_TRANSPARENT; }
+    StateIndices    GetStateEnum() override { return STATE_MAPEDITSTATE; }
+private:
+    // position of the mouse on the screen relative to the map array
+    SDL_FPoint simPos{};
+    bool simPosInMap {};
+};
+/*
+// state active when in the main menu.
+class MainMenuState : public State {
+public:
+    void update(GameState* game, float deltaTime) override;
+    void render(GameState* game) override;
+    void onEnter(GameState* game) override;
+    void onExit(GameState* game) override;
+
+    StateRenderType renderType() override { return STATE_RENDER_TYPE_OPAQUE; }
+};
+
+// State when the player has just died and the respawn menu is showing
+class DeadState : public State {
+public:
+    void update(GameState* game, float deltaTime) override;
+    void render(GameState* game) override;
+    void onEnter(GameState* game) override;
+    void onExit(GameState* game) override;
+
+    StateRenderType renderType() override { return STATE_RENDER_TYPE_TRANSPARENT; }
+};*/
+
+inline const std::array<State*, STATE_MAX> GLOBAL_STATES {new PlayingState(), new MapEditState()};
 
 /////////////////////////////////////
 //       IMGUI PARAMETERS          //

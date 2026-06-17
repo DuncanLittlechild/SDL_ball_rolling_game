@@ -63,14 +63,14 @@ void DrawImguiMapEditor(GameState* game) {
         ChangeMapSize(&game->map, GLOBALIMGUIPARAMS.mapHeight, GLOBALIMGUIPARAMS.mapWidth);
     }
     // Button to pause the game and start the map editor
-    if (game->state != GAME_MAP_EDIT) {
+    if (game->states[game->states.size() - 1] != STATE_MAPEDITSTATE) {
         if (ImGui::Button("Edit Map")) {
-            game->state = GAME_MAP_EDIT;
+            game->states.push_back(STATE_MAPEDITSTATE);
             GLOBALIMGUIPARAMS.showMapEditWindow = true;
         }
     }
     else if (ImGui::Button("Exit edit mode")) {
-        game->state = GAME_PLAYING;
+        game->states.pop_back();
         GLOBALIMGUIPARAMS.showMapEditWindow = false;
     }
     ImGui::InputText("Map name", GLOBALIMGUIPARAMS.mapName, maxMapNameLength);

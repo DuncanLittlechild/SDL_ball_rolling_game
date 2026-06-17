@@ -46,6 +46,8 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv) {
     UpdateCamera(game->camera, game);
     InitTextures(game);
 
+    game->states.emplace_back(STATE_PLAYINGSTATE);
+
     *appstate = game;
 
     return SDL_APP_CONTINUE;
@@ -108,28 +110,22 @@ SDL_AppResult SDL_AppIterate(void* appstate){
     GameState* game {(GameState*)appstate};
     SDL_SetRenderDrawColor(game->renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
     SDL_RenderClear(game->renderer);
-
     // Get DeltaTime
     Uint64 currentTime {SDL_GetPerformanceCounter()};
     float deltaTime {(currentTime - GLOBALGAMESETTINGS.lastTime) / (float)SDL_GetPerformanceFrequency()};
     GLOBALGAMESETTINGS.lastTime = currentTime;
 
-    switch (game->state) {
-        case(GAME_PLAYING): {
-            // Update player velocity and position
-            UpdatePlayer(game, deltaTime);
-            // Update camera matrix
-            // Draw map
-            DrawGame(game);
-        } break;
-        case (GAME_MAP_EDIT): {
-            DrawGame(game);
-            UpdateMap(game);
-        } break;
-        // By default, show the map and the camera but don't update player position
-        default: {
-            DrawGame(game);
-        }
+    std::size_t lastStateIndex {game->states.size() - 1};
+    // Update the topmost state
+    GLOBAL_STATES[game->states[lastStateIndex]]->update(game, deltaTime);
+    // Get the latest opaque state
+    while (GLOBAL_STATES[game->states[lastStateIndex]]->renderType() != STATE_RENDER_TYPE_OPAQUE) {
+        --lastStateIndex;
+    }
+
+    // render the states, starting with the latest opaque state
+    for (; lastStateIndex < game->states.size(); ++lastStateIndex) {
+        GLOBAL_STATES[game->states[lastStateIndex]]->render(game);
     }
 
     DrawImgui(game);
@@ -143,6 +139,9 @@ void SDL_AppQuit(void* appstate, SDL_AppResult result){
     GameState* game {(GameState*)appstate};
     SDL_DestroyRenderer(game->renderer);
     SDL_DestroyWindow(game->window);
+    for (State* state : GLOBAL_STATES) {
+        delete state;
+    }
 
     QuitImgui();
 }

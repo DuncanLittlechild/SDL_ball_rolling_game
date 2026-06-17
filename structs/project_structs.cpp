@@ -1,4 +1,81 @@
 #include "project_structs.h"
+#include "phases.h"
+///////////////////////////////////
+//           GAMEMEMORY         //
+//////////////////////////////////
+State *GameState::GetCurrentState() {
+    return GLOBAL_STATES[states[states.size() - 1]];
+}
+
+///////////////////////////////////
+//              MAP          //
+//////////////////////////////////
+
+bool GameMap::PointInMap(const SDL_FPoint &point) {
+    return point.x >= 0 && point.x < m[0].size() && point.y >= 0 && point.y < m.size();
+}
+
+///////////////////////////////////
+//           STATES             //
+//////////////////////////////////
+// Dominant state for when the game is being played
+
+void PlayingState::update(GameState* game, float deltaTime) {
+    // Update player velocity and position
+    UpdatePlayer(game, deltaTime);
+}
+void PlayingState::render(GameState* game) {
+    // Draw map
+    DrawGame(game);
+}
+void PlayingState::onEnter(GameState* game) {
+
+}
+void PlayingState::onExit(GameState* game) {
+
+}
+
+
+// State when the game is being edited
+void MapEditState::update(GameState* game, float deltaTime) {
+    // Get the position of the mouse in render space
+    float screenX, screenY;
+    SDL_GetMouseState(&screenX, &screenY);
+
+    float renderX, renderY;
+    SDL_RenderCoordinatesFromWindow(game->renderer, screenX, screenY, &renderX, &renderY);
+
+    // Invert the camera matrix to translate the render position into simulated space
+    Mat3 camInv {InvertMat3(game->camera.cameraMat)};
+
+    simPos = TransformPointMat3(camInv, renderX, renderY);
+    simPosInMap = game->map.PointInMap(simPos);
+
+    // If the player has clicked on a square, change its type.
+    if (game->input.playerClick && simPosInMap) {
+        auto& targetCell {game->map.m[(int)simPos.y][(int)simPos.x]};
+        targetCell.tp = (CellType)((targetCell.tp + 1) % CTYPE_MAX);
+    }
+
+    // Reset playerclick to make sure the event does not constantly fire
+    game->input.playerClick = false;
+}
+void MapEditState::render(GameState* game) {
+    // If the mouse pointer is in the map, render a box around it
+    if (simPosInMap) {
+        SDL_FPoint boxScreenPos {TransformPointMat3(game->camera.cameraMat, (int)simPos.x, (int)simPos.y)};
+        SDL_FRect box {boxScreenPos.x, boxScreenPos.y, game->camera.zoom, game->camera.zoom};
+        SDL_SetRenderDrawColorFloat(game->renderer,1.0f,1.0f,1.0f,1.0f);
+        SDL_RenderRect(game->renderer, &box);
+        SDL_SetRenderDrawColor(game->renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
+    }
+}
+void MapEditState::onEnter(GameState* game) {
+
+}
+void MapEditState::onExit(GameState* game) {
+
+}
 
 ///////////////////////////////////
 //              CAMERA          //

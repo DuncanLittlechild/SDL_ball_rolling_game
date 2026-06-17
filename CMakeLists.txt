@@ -19,6 +19,13 @@ FetchContent_Declare(SDL3_image
 )
 FetchContent_MakeAvailable(SDL3_image)
 
+# --- SDL3_ttf
+FetchContent_Declare(SDL3_ttf
+        GIT_REPOSITORY https://github.com/libsdl-org/SDL_ttf.git
+        GIT_TAG        main
+)
+FetchContent_MakeAvailable(SDL3_ttf)
+
 # --- Dear ImGui (compiled inline, no prebuilt lib needed) ---
 FetchContent_Declare(imgui
         GIT_REPOSITORY https://github.com/ocornut/imgui.git
@@ -47,7 +54,6 @@ add_executable(SDL_ball_rolling_game
         structs/project_structs.cpp
         utils/dl_imgui_functions.cpp
         utils/project_utils.cpp
-        utils/project_utils.h
         main.cpp
 )
 
@@ -60,5 +66,6 @@ target_include_directories(SDL_ball_rolling_game PRIVATE
 target_link_libraries(SDL_ball_rolling_game PRIVATE
         SDL3::SDL3
         SDL3_image::SDL3_image
+        SDL3_ttf::SDL3_ttf
         imgui_lib
 )
